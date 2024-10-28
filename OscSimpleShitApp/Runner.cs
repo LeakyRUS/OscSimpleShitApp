@@ -115,6 +115,8 @@ public class Runner : IDisposable
             if (patternHandler == null)
                 continue;
 
+            if (ret.ContainsKey(wholeBody))
+                continue;
             ret.Add(wholeBody, (patternHandler, parameter));
         }
 
