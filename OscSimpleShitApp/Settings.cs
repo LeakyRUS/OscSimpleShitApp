@@ -19,7 +19,7 @@ public class Settings
     {
         if (obj == null)
             return false;
-        
+
         if (ReferenceEquals(this, obj))
             return true;
 

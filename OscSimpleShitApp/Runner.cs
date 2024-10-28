@@ -84,7 +84,7 @@ public class Runner : IDisposable
 
     private string HandleReplase(string text)
     {
-        foreach(var kv in _handles)
+        foreach (var kv in _handles)
         {
             text = text.Replace(kv.Key, kv.Value.Item1.Replace(kv.Value.Item2));
         }
@@ -101,10 +101,10 @@ public class Runner : IDisposable
 
         foreach (var match in matches.AsEnumerable())
         {
-            if(!match.Success)
+            if (!match.Success)
                 continue;
 
-            if(match.Groups.Count != 3)
+            if (match.Groups.Count != 3)
                 continue;
 
             var wholeBody = match.Groups[0].Value;
