@@ -9,10 +9,17 @@ public class Settings
 
     public string BaseUrl { get; set; } = "127.0.0.1";
     public int BasePort { get; set; } = 9000;
+    public string Locale { get; set; } = "en-US";
 
     public override int GetHashCode()
     {
-        return Url.GetHashCode() ^ Delay.GetHashCode() ^ Text.GetHashCode();
+        return Url.GetHashCode()
+            ^ Delay.GetHashCode()
+            ^ Text.GetHashCode()
+            ^ ShowDebug.GetHashCode()
+            ^ BaseUrl.GetHashCode()
+            ^ BasePort.GetHashCode()
+            ^ Locale.GetHashCode();
     }
 
     public override bool Equals(object? obj)

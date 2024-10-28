@@ -1,6 +1,7 @@
 ﻿using CoreOSC;
 using CoreOSC.IO;
 using Microsoft.Extensions.Configuration;
+using System.Globalization;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 
@@ -65,7 +66,10 @@ public class Runner : IDisposable
 
         _settings = settings;
 
+        _udpClient.Dispose();
         _udpClient = new UdpClient(_settings.BaseUrl, _settings.BasePort);
+
+        CultureInfo.DefaultThreadCurrentCulture = new CultureInfo(_settings.Locale);
 
         SetupParameters(_settings.Text);
     }
