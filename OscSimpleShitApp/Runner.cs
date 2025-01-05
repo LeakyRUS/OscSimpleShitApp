@@ -43,7 +43,20 @@ public class Runner(IConfiguration configuration) : IDisposable
         var sb = new StringBuilder(text);
 
         foreach (var kv in _handles)
-            sb.Replace(kv.Key, kv.Value.Item1.Replace(kv.Value.Item2));
+        {
+            var replaced = string.Empty;
+            try
+            {
+                replaced = kv.Value.Item1.Replace(kv.Value.Item2);
+            }
+            catch(Exception ex)
+            {
+                if (_settings.ShowDebug)
+                    Console.WriteLine(ex.Message);
+            }
+
+            sb.Replace(kv.Key, replaced);
+        }
 
         return sb.ToString();
     }
