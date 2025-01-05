@@ -21,11 +21,5 @@ Console.CancelKeyPress += (sender, e) =>
     e.Cancel = true;
 };
 
-try
-{
-    using var runner = new Runner(configurationRoot);
-    runner.Run(cts.Token).Wait();
-}
-catch (AggregateException)
-{
-}
+using var runner = new Runner(configurationRoot);
+runner.Run(cts.Token).Wait();

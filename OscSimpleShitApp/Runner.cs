@@ -1,6 +1,8 @@
 ﻿using CoreOSC;
 using CoreOSC.IO;
 using Microsoft.Extensions.Configuration;
+using OscSimpleShitApp.PatternHandlers;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.Sockets;
 using System.Text;
@@ -30,11 +32,19 @@ public class Runner(IConfiguration configuration) : IDisposable
 
     public async Task Run(CancellationToken cancellationToken)
     {
+        var stopWatch = new Stopwatch();
+
         while (!cancellationToken.IsCancellationRequested)
         {
+            stopWatch.Start();
+
             ChangeSettingsIfNeeded();
 
             await SendOscMessage(cancellationToken);
+
+            stopWatch.Stop();
+
+            await Task.Delay(_settings.Delay - (int)stopWatch.ElapsedMilliseconds, cancellationToken);
         }
     }
 
@@ -43,20 +53,7 @@ public class Runner(IConfiguration configuration) : IDisposable
         var sb = new StringBuilder(text);
 
         foreach (var kv in _handles)
-        {
-            var replaced = string.Empty;
-            try
-            {
-                replaced = kv.Value.Item1.Replace(kv.Value.Item2);
-            }
-            catch(Exception ex)
-            {
-                if (_settings.ShowDebug)
-                    Console.WriteLine(ex.Message);
-            }
-
-            sb.Replace(kv.Key, replaced);
-        }
+            sb.Replace(kv.Key, kv.Value.Item1.Replace(kv.Value.Item2));
 
         return sb.ToString();
     }
@@ -71,12 +68,9 @@ public class Runner(IConfiguration configuration) : IDisposable
         };
         var message = new OscMessage(new Address(_settings.Url), oscArgs);
 
-        if (_settings.ShowDebug)
-            Console.WriteLine(message.Address.Value + " " + string.Join(" ", oscArgs.Select(x => x?.ToString()?.Replace("\n", " ") ?? string.Empty)));
+        Debug(message.Address.Value + " " + string.Join(" ", oscArgs.Select(x => x?.ToString()?.Replace("\n", " ") ?? string.Empty)));
 
         await _udpClient.SendMessageAsync(message);
-
-        await Task.Delay(_settings.Delay, cancellationToken);
     }
 
     private void ChangeSettingsIfNeeded()
@@ -111,11 +105,15 @@ public class Runner(IConfiguration configuration) : IDisposable
         {
             var patternHandler = GetPatternHandler(match.Pattern);
             if (patternHandler == null)
+            {
+                Warning(string.Format("Can't handle \"{0}\". Pattern will be shown as text.", match.WholeBody));
                 continue;
+            }
 
             if (ret.ContainsKey(match.WholeBody))
                 continue;
-            ret.Add(match.WholeBody, (patternHandler, match.Parameter));
+
+            ret.Add(match.WholeBody, (TryPatternHandler(patternHandler, match.Parameter, match.WholeBody) ? patternHandler : new BoilerplatePatternHandler(), match.Parameter));
         }
 
         _handles = ret;
@@ -159,6 +157,60 @@ public class Runner(IConfiguration configuration) : IDisposable
         }
 
         return result;
+    }
+
+    private void Debug(string message)
+    {
+        SendMessageWithColor(Console.Out, message);
+    }
+
+    private void Warning(string message)
+    {
+        SendMessageWithColor(Console.Out, message, ConsoleColor.Cyan, ConsoleColor.Magenta);
+    }
+
+    private void Error(string message)
+    {
+        SendMessageWithColor(Console.Error, message, ConsoleColor.Red);
+    }
+
+    private bool TryPatternHandler(IPatternHandler patternHandler, string parameter, string wholePattern)
+    {
+        try
+        {
+            patternHandler.Replace(parameter);
+            return true;
+        }
+        catch(Exception ex)
+        {
+            Error(string.Format("Pattern \"{0}\" does not work for reason \"{1}\". Try changing the pattern parameter or remove the pattern.", wholePattern, ex.Message));
+
+            return false;
+        }
+    }
+
+    private void SendMessageWithColor(TextWriter writer, string message, ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null)
+    {
+        if (!_settings.ShowDebug)
+            return;
+
+        var fColor = Console.ForegroundColor;
+        var bColor = Console.BackgroundColor;
+
+        if (foregroundColor.HasValue)
+        {
+            Console.ForegroundColor = foregroundColor.Value;
+        }
+
+        if (backgroundColor.HasValue)
+        {
+            Console.BackgroundColor = backgroundColor.Value;
+        }
+
+        writer.WriteLine(message);
+
+        Console.ForegroundColor = fColor;
+        Console.BackgroundColor = bColor;
     }
 
     private static IPatternHandler? GetPatternHandler(string pattern)
